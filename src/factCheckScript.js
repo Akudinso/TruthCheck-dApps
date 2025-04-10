@@ -7,15 +7,18 @@ For each claim, respond with a simple answer: 'True' if the claim is correct, or
 Provide a brief explanation only if necessary, but prioritize brevity and clarity.`;
 
 export async function factCheckText(content) {
-  const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: content,
-    config: {
-      systemInstruction: {
-        parts: [{ text: instruction }]
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: content,
+      config: {
+        systemInstruction: {
+          parts: [{ text: instruction }]
+        }
       }
-    }
-  });
-  return response.text;
+    });
+    return response.text;
+  } catch (err) {
+    throw err;
+  }
 }
-
