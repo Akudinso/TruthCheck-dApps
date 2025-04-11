@@ -1,20 +1,31 @@
 import { GoogleGenAI } from "@google/genai";
+import dotenv from 'dotenv';
+dotenv.config();
 
-const ai = new GoogleGenAI({ apiKey: "AIzaSyD0GCYsN8JkzJR_JrFhufdlK1BFN9kibz4" });
+const apiKey = process.env.GOOGLE_API_KEY;
+
+if (!apiKey) {
+  throw new Error("Google API key is missing in the environment variables");
+}
+
+const ai = new GoogleGenAI({ apiKey });
 
 const instruction = `
-You are a fact-checking expert. I will give you a piece of text that may contain one or more factual claims.
-For each claim, label it with one of the following:
-  - "True"
-  - "False"
-  - "Unverifiable"
+You are a fact-checking expert. I will give you a piece of text to evaluate as a whole.
+Respond ONLY with valid JSON in this exact format (no extra text, no markdown, no code blocks):
 
-Always choose one of the above. If a statement is opinion, rhetorical, unverifiable due to lack of information, or partially true without full context, label it as "Unverifiable". Provide a short explanation only when the label is "False" or "Unverifiable".
+{
+  "claim": "[the entire input text]",
+  "label": "True" | "False" | "Unverifiable",
+  "explanation": "[only if label is False or Unverifiable]"
+}
 
-Return the result as raw JSON. Do not include any markdown formatting, code blocks, or extra commentary. Only output a JSON array of objects, each with:
-  - claim: string
-  - label: "True" | "False" | "Unverifiable"
-  - explanation: (optional) string
+Rules:
+1. Evaluate the entire text as one claim
+2. "True" only for verifiably true factual statements
+3. "False" for verifiably false statements (with explanation)
+4. "Unverifiable" for opinions, predictions, or incomplete information (with explanation)
+5. No additional commentary outside the JSON structure
 `;
 
 export async function factCheckText(content) {
@@ -26,17 +37,24 @@ export async function factCheckText(content) {
         systemInstruction: {
           parts: [{ text: instruction }]
         },
-        temperature: 0
+        temperature: 0,
+        response_mime_type: "application/json"
       }
     });
 
-    const raw = response.text.trim();
-    const jsonStart = raw.indexOf("[");
-    const json = JSON.parse(raw.slice(jsonStart));
-    return json;
+    try {
+      const result = JSON.parse(response.text);
+      return result;
+    } catch (parseError) {
+      const jsonMatch = response.text.match(/\{.*\}/s);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      throw new Error("Could not extract JSON from response");
+    }
 
   } catch (err) {
     console.error("Fact-checking error:", err);
-    throw new Error("Failed to parse fact-check response");
+    throw new Error("Failed to process fact-check response");
   }
 }
