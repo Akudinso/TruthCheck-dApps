@@ -3,6 +3,7 @@ import cors from 'cors';
 import axios from 'axios';
 import { factCheckText } from './factCheckScript.js';
 import dotenv from 'dotenv';
+import { storeFactCheck, getFactCheck } from './smartContract.js'; 
 
 dotenv.config();
 const app = express();
@@ -18,7 +19,11 @@ app.post('/fact-check', async (req, res) => {
 
   try {
     const factCheckResult = await factCheckText(content);
-    res.status(200).json({ fact_check_result: factCheckResult });
+
+    // Step 2: Store the fact check result on-chain
+    const txHash = await storeFactCheck(content, JSON.stringify(factCheckResult));
+    res.status(200).json({ fact_check_result: factCheckResult, transaction_hash: txHash,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
