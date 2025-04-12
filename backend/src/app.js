@@ -69,6 +69,31 @@ app.post('/extract-text', async (req, res) => {
   }
 });
 
+app.post('/get-fact-check', async (req, res) => {
+  const { content } = req.body;
+
+  if (!content) {
+    return res.status(400).json({ error: 'No content provided' });
+  }
+
+  try {
+    const [result, timestamp] = await getFactCheck(content);
+
+    // If result is an empty string, it means the content hasn't been fact-checked yet
+    if (!result) {
+      return res.status(404).json({ error: 'Fact check result not found for this content' });
+    }
+
+    res.status(200).json({
+      fact_check_result: result,
+      stored_at: new Date(Number(timestamp) * 1000).toISOString(), // convert unix timestamp
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 const PORT = process.env.PORT || 4500;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

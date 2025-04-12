@@ -119,6 +119,6 @@ export const storeFactCheck = async (content, result) => {
 // Function to retrieve fact-check result
 export const getFactCheck = async (content) => {
   const contentHash = ethers.keccak256(ethers.toUtf8Bytes(content));
-  const result = await contract.getFactCheck(contentHash);
-  return result;
+  const [result, timestamp] = await contract.getFactCheck(contentHash);
+  return [result, timestamp];
 };
